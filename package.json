@@ -16,6 +16,7 @@
     "lodash": "^4.17.4",
     "nodemon": "^1.11.1",
     "prompt-list": "^2.2.0",
+    "quietcool": "^1.0.0",
     "rxjs": "^5.4.3"
   }
 }
