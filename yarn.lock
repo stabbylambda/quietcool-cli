@@ -1652,6 +1652,14 @@ qs@~6.4.0:
   version "6.4.0"
   resolved "https://registry.yarnpkg.com/qs/-/qs-6.4.0.tgz#13e26d28ad6b0ffaa91312cd3bf708ed351e7233"
 
+quietcool@^1.0.0:
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/quietcool/-/quietcool-1.0.1.tgz#794923fa61942899aae290304426749db49dfb09"
+  dependencies:
+    coap "^0.21.0"
+    limiter "^1.1.2"
+    rxjs "^5.4.3"
+
 radio-symbol@^2.0.0:
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/radio-symbol/-/radio-symbol-2.0.0.tgz#7aa9bfc50485636d52dd76d6a8e631b290799ae1"
