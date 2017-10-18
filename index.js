@@ -60,6 +60,42 @@ const mainMenu = ip => {
     });
 };
 
+const configureMenu = (ip, answers) => {
+    let uid = answers.mainMenu.value.info.uid;
+
+    const sequences = { 0: 3, 1: 2, 4: 1 };
+    return Rx.Observable
+        .from(
+            enquirer.ask([
+                {
+                    type: "list",
+                    name: "configOption",
+                    message: `Configure ${answers.mainMenu.value.info.name} (${sequences[answers.mainMenu.value.status.sequence]})`,
+                    choices: ["Update Name", "Update Speeds"]
+                }
+            ])
+        )
+        .flatMap(answers => {
+            switch(answers.configOption) {
+            case "Update Name":
+                return Rx.Observable.from(enquirer.ask({
+                    type: "input",
+                    name: "fanName",
+                    message: "What is the new name?"
+                }))
+                    .flatMap(name => fanControl.updateFanName(ip, uid, answers.fanName));
+            case "Update Speeds":
+                return Rx.Observable.from(enquirer.ask({
+                    type: "list",
+                    name: "fanSpeeds",
+                    message: "How many speeds does this fan have?",
+                    choices: ["1","2","3"]
+                }))
+                    .flatMap(name => fanControl.updateFanSpeeds(ip, uid, answers.fanSpeeds));
+            }
+        })
+        .flatMap(x => program(ip));
+}
 const speedMenu = (ip, answers) => {
   let uid = answers.mainMenu.value.info.uid;
 
@@ -102,9 +138,8 @@ const program = ip => {
             choices: [
               "Turn On",
               "Turn Off",
-              "Set Speed",
-              "Update Name",
-              "Update Speed",
+              "Set Current Speed",
+              "Configure",
               "Back To Menu"
             ]
           }
@@ -118,7 +153,9 @@ const program = ip => {
           return fanControl.turnFanOn(ip, uid).flatMap(x => program(ip));
         case "Turn Off":
           return fanControl.turnFanOff(ip, uid).flatMap(x => program(ip));
-        case "Set Speed":
+      case "Configure":
+          return configureMenu(ip, answers);
+        case "Set Current Speed":
           return speedMenu(ip, answers);
         case "Back To Menu":
           return program(ip);
@@ -127,6 +164,7 @@ const program = ip => {
       }
     });
 };
+
 let ip = process.env.CONTROLLER_IP;
 program(ip)
   .catch(err => {
