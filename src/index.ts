@@ -61,6 +61,11 @@ const mainMenu = ip => {
     });
 };
 
+interface ConfigAnswers {
+  configOption: string;
+  fanName: string;
+  fanSpeeds: string;
+}
 const configureMenu = (ip, answers) => {
   let uid = answers.mainMenu.value.info.uid;
 
@@ -76,7 +81,7 @@ const configureMenu = (ip, answers) => {
       }
     ])
   )
-    .flatMap(answers => {
+    .flatMap<ConfigAnswers>(answers => {
       switch (answers.configOption) {
         case "Update Name":
           return Observable.from(
@@ -85,7 +90,9 @@ const configureMenu = (ip, answers) => {
               name: "fanName",
               message: "What is the new name?"
             })
-          ).flatMap(name => fanControl.updateFanName(ip, uid, answers.fanName));
+          )
+            .flatMap(name => fanControl.updateFanName(ip, uid, answers.fanName))
+            .map(x => ({}));
         case "Update Speeds":
           return Observable.from(
             enquirer.ask({
@@ -94,13 +101,20 @@ const configureMenu = (ip, answers) => {
               message: "How many speeds does this fan have?",
               choices: ["1", "2", "3"]
             })
-          ).flatMap(name =>
-            fanControl.updateFanSpeeds(ip, uid, answers.fanSpeeds)
-          );
+          )
+            .flatMap(name =>
+              fanControl.updateFanSpeeds(ip, uid, answers.fanSpeeds)
+            )
+            .map(x => ({}));
+        default:
+          return Observable.of({});
       }
     })
     .flatMap(x => program(ip));
 };
+interface SpeedAnswers {
+  setSpeed: string;
+}
 const speedMenu = (ip, answers) => {
   let uid = answers.mainMenu.value.info.uid;
 
@@ -114,23 +128,31 @@ const speedMenu = (ip, answers) => {
       }
     ])
   )
-    .flatMap(answers => {
+    .flatMap<SpeedAnswers>(answers => {
       switch (answers.setSpeed) {
         case "High":
-          return fanControl.setCurrentSpeed(ip, uid, 3);
+          return fanControl.setCurrentSpeed(ip, uid, "3");
         case "Medium":
-          return fanControl.setCurrentSpeed(ip, uid, 2);
+          return fanControl.setCurrentSpeed(ip, uid, "2");
         case "Low":
-          return fanControl.setCurrentSpeed(ip, uid, 1);
+          return fanControl.setCurrentSpeed(ip, uid, "1");
       }
     })
     .flatMap(x => program(ip));
 };
 
+interface MainMenuAnswerType {
+  type: string;
+  value: string;
+}
+interface MainMenuAnswers {
+  mainMenu: MainMenuAnswerType;
+}
+
 const program = ip => {
   return mainMenu(ip)
-    .takeWhile(answer => answer.mainMenu.value != "Quit")
-    .flatMap(({ mainMenu: { type, value } }) => {
+    .takeWhile<MainMenuAnswers>(answer => answer.mainMenu.value != "Quit")
+    .flatMap<MainMenuAnswers>(({ mainMenu: { type, value } }) => {
       if (type == "action" && value == "Refresh") {
         return program(ip);
       } else {
