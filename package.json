@@ -4,7 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "build": "tsc",
+    "start": "ts-node src/index.ts",
+    "format": "prettier --write src/*"
   },
   "author": "",
   "license": "Apache-2.0",
@@ -16,7 +18,12 @@
     "lodash": "^4.17.4",
     "nodemon": "^1.11.1",
     "prompt-list": "^2.2.0",
-    "quietcool": "^1.0.0",
+    "quietcool": "^1.1.0",
     "rxjs": "^5.4.3"
+  },
+  "devDependencies": {
+    "prettier": "^1.10.2",
+    "ts-node": "^4.1.0",
+    "typescript": "^2.7.2"
   }
 }

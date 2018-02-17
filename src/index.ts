@@ -8,24 +8,24 @@ const Enquirer = require("enquirer");
 const enquirer = new Enquirer();
 enquirer.register("list", require("prompt-list"));
 
+const sequences = { 0: 3, 1: 2, 4: 1 };
 const formatFanName = ({ info, status }) => {
+  const speedCount = sequences[status.sequence];
   const power = { "1": "ON", "0": "OFF" };
   const speeds = { 3: "High", 2: "Medium", 1: "Low" };
   let onOff = power[info.status];
   let currentSpeed = speeds[status.speed];
-  return `${info.name} ${onOff} ${currentSpeed} (${info.uid})`;
+  return `${info.name} ${onOff} ${currentSpeed} ${speedCount} (${info.uid})`;
 };
 
 const mainMenu = ip => {
-  return Rx.Observable
-    .of(ip)
+  return Rx.Observable.of(ip)
     .flatMap(ip => fanControl.listFans(ip))
     .flatMap(fans => {
       let fanCount = fans.length;
       console.log(`Found ${fanCount} fans`);
-      return Rx.Observable
-        .from(fans)
-        .concatMap(fan => Rx.Observable.of(fan).delay(100))
+      return Rx.Observable.from(fans)
+        .concatMap(fan => Rx.Observable.of(fan))
         .flatMap(fan => fanControl.getFanInfo(ip, fan.uid))
         .flatMap(info =>
           fanControl.getFanStatus(ip, info.uid).map(status => ({
@@ -61,55 +61,58 @@ const mainMenu = ip => {
 };
 
 const configureMenu = (ip, answers) => {
-    let uid = answers.mainMenu.value.info.uid;
+  let uid = answers.mainMenu.value.info.uid;
 
-    const sequences = { 0: 3, 1: 2, 4: 1 };
-    return Rx.Observable
-        .from(
-            enquirer.ask([
-                {
-                    type: "list",
-                    name: "configOption",
-                    message: `Configure ${answers.mainMenu.value.info.name} (${sequences[answers.mainMenu.value.status.sequence]})`,
-                    choices: ["Update Name", "Update Speeds"]
-                }
-            ])
-        )
-        .flatMap(answers => {
-            switch(answers.configOption) {
-            case "Update Name":
-                return Rx.Observable.from(enquirer.ask({
-                    type: "input",
-                    name: "fanName",
-                    message: "What is the new name?"
-                }))
-                    .flatMap(name => fanControl.updateFanName(ip, uid, answers.fanName));
-            case "Update Speeds":
-                return Rx.Observable.from(enquirer.ask({
-                    type: "list",
-                    name: "fanSpeeds",
-                    message: "How many speeds does this fan have?",
-                    choices: ["1","2","3"]
-                }))
-                    .flatMap(name => fanControl.updateFanSpeeds(ip, uid, answers.fanSpeeds));
-            }
-        })
-        .flatMap(x => program(ip));
-}
+  return Rx.Observable.from(
+    enquirer.ask([
+      {
+        type: "list",
+        name: "configOption",
+        message: `Configure ${answers.mainMenu.value.info.name} (${
+          sequences[answers.mainMenu.value.status.sequence]
+        })`,
+        choices: ["Update Name", "Update Speeds"]
+      }
+    ])
+  )
+    .flatMap(answers => {
+      switch (answers.configOption) {
+        case "Update Name":
+          return Rx.Observable.from(
+            enquirer.ask({
+              type: "input",
+              name: "fanName",
+              message: "What is the new name?"
+            })
+          ).flatMap(name => fanControl.updateFanName(ip, uid, answers.fanName));
+        case "Update Speeds":
+          return Rx.Observable.from(
+            enquirer.ask({
+              type: "list",
+              name: "fanSpeeds",
+              message: "How many speeds does this fan have?",
+              choices: ["1", "2", "3"]
+            })
+          ).flatMap(name =>
+            fanControl.updateFanSpeeds(ip, uid, answers.fanSpeeds)
+          );
+      }
+    })
+    .flatMap(x => program(ip));
+};
 const speedMenu = (ip, answers) => {
   let uid = answers.mainMenu.value.info.uid;
 
-  return Rx.Observable
-    .from(
-      enquirer.ask([
-        {
-          type: "list",
-          name: "setSpeed",
-          message: `What speed for ${answers.mainMenu.value.info.name}`,
-          choices: ["High", "Medium", "Low"]
-        }
-      ])
-    )
+  return Rx.Observable.from(
+    enquirer.ask([
+      {
+        type: "list",
+        name: "setSpeed",
+        message: `What speed for ${answers.mainMenu.value.info.name}`,
+        choices: ["High", "Medium", "Low"]
+      }
+    ])
+  )
     .flatMap(answers => {
       switch (answers.setSpeed) {
         case "High":
@@ -153,7 +156,7 @@ const program = ip => {
           return fanControl.turnFanOn(ip, uid).flatMap(x => program(ip));
         case "Turn Off":
           return fanControl.turnFanOff(ip, uid).flatMap(x => program(ip));
-      case "Configure":
+        case "Configure":
           return configureMenu(ip, answers);
         case "Set Current Speed":
           return speedMenu(ip, answers);
