@@ -1,12 +1,13 @@
-const _ = require("lodash");
-const Rx = require("rxjs");
-const config = require("dotenv").config();
+import * as _ from "lodash";
+import { Observable } from "rxjs";
+import * as dotenv from "dotenv";
+import * as fanControl from "quietcool";
+import Enquirer from "enquirer";
+import promptList from "prompt-list";
 
-const fanControl = require("quietcool");
-
-const Enquirer = require("enquirer");
+const config = dotenv.config();
 const enquirer = new Enquirer();
-enquirer.register("list", require("prompt-list"));
+enquirer.register("list", promptList);
 
 const sequences = { 0: 3, 1: 2, 4: 1 };
 const formatFanName = ({ info, status }) => {
@@ -19,13 +20,13 @@ const formatFanName = ({ info, status }) => {
 };
 
 const mainMenu = ip => {
-  return Rx.Observable.of(ip)
+  return Observable.of(ip)
     .flatMap(ip => fanControl.listFans(ip))
     .flatMap(fans => {
       let fanCount = fans.length;
       console.log(`Found ${fanCount} fans`);
-      return Rx.Observable.from(fans)
-        .concatMap(fan => Rx.Observable.of(fan))
+      return Observable.from(fans)
+        .concatMap(fan => Observable.of(fan))
         .flatMap(fan => fanControl.getFanInfo(ip, fan.uid))
         .flatMap(info =>
           fanControl.getFanStatus(ip, info.uid).map(status => ({
@@ -63,7 +64,7 @@ const mainMenu = ip => {
 const configureMenu = (ip, answers) => {
   let uid = answers.mainMenu.value.info.uid;
 
-  return Rx.Observable.from(
+  return Observable.from(
     enquirer.ask([
       {
         type: "list",
@@ -78,7 +79,7 @@ const configureMenu = (ip, answers) => {
     .flatMap(answers => {
       switch (answers.configOption) {
         case "Update Name":
-          return Rx.Observable.from(
+          return Observable.from(
             enquirer.ask({
               type: "input",
               name: "fanName",
@@ -86,7 +87,7 @@ const configureMenu = (ip, answers) => {
             })
           ).flatMap(name => fanControl.updateFanName(ip, uid, answers.fanName));
         case "Update Speeds":
-          return Rx.Observable.from(
+          return Observable.from(
             enquirer.ask({
               type: "list",
               name: "fanSpeeds",
@@ -103,7 +104,7 @@ const configureMenu = (ip, answers) => {
 const speedMenu = (ip, answers) => {
   let uid = answers.mainMenu.value.info.uid;
 
-  return Rx.Observable.from(
+  return Observable.from(
     enquirer.ask([
       {
         type: "list",

@@ -11,17 +11,19 @@
   "author": "",
   "license": "Apache-2.0",
   "dependencies": {
-    "dotenv": "^4.0.0",
+    "dotenv": "^5.0.0",
     "enquirer": "^1.0.2",
-    "inquirer": "^3.2.3",
+    "inquirer": "^5.1.0",
     "limiter": "^1.1.2",
     "lodash": "^4.17.4",
     "nodemon": "^1.11.1",
-    "prompt-list": "^2.2.0",
+    "prompt-list": "^3.1.2",
     "quietcool": "^1.1.0",
     "rxjs": "^5.4.3"
   },
   "devDependencies": {
+    "@types/dotenv": "^4.0.2",
+    "@types/lodash": "^4.14.104",
     "prettier": "^1.10.2",
     "ts-node": "^4.1.0",
     "typescript": "^2.7.2"
