@@ -9,196 +9,176 @@ const config = dotenv.config();
 const enquirer = new Enquirer();
 enquirer.register("list", promptList);
 
+type Fan = fanControl.FanDetails;
+
+enum Action {
+  Quit = "Quit",
+  Refresh = "Refresh"
+}
+
+interface Answer<T> {
+  answer: T;
+}
+
+function ask<T>(details): Observable<Answer<T>> {
+  return Observable.from<Answer<T>>(
+    enquirer.ask([
+      {
+        ...details,
+        name: "answer"
+      }
+    ])
+  );
+}
+
+enum CurrentSpeed {
+  High = 3,
+  Medium = 2,
+  Low = 1
+}
+
+enum Power {
+  On = 1,
+  Off = 0
+}
 const sequences = { 0: 3, 1: 2, 4: 1 };
-const formatFanName = ({ info, status }) => {
-  const speedCount = sequences[status.sequence];
-  const power = { "1": "ON", "0": "OFF" };
-  const speeds = { 3: "High", 2: "Medium", 1: "Low" };
-  let onOff = power[info.status];
-  let currentSpeed = speeds[status.speed];
-  return `${info.name} ${onOff} ${currentSpeed} ${speedCount} (${info.uid})`;
+const formatFanName = (fan: Fan): string => {
+  const speedCount = sequences[fan.status.sequence];
+  let onOff = Power[fan.info.status];
+  let currentSpeed = CurrentSpeed[fan.status.speed];
+  return `${fan.info.name} ${onOff} ${currentSpeed} ${speedCount} (${
+    fan.id.uid
+  })`;
 };
 
-const mainMenu = ip => {
-  return Observable.of(ip)
-    .flatMap(ip => fanControl.listFans(ip))
-    .flatMap(fans => {
-      let fanCount = fans.length;
-      console.log(`Found ${fanCount} fans`);
-      return Observable.from(fans)
-        .concatMap(fan => Observable.of(fan))
-        .flatMap(fan => fanControl.getFanInfo(ip, fan.uid))
-        .flatMap(info =>
-          fanControl.getFanStatus(ip, info.uid).map(status => ({
-            status,
-            info
-          }))
-        )
-        .take(fanCount)
-        .reduce((acc, fan) => {
-          acc[fan.info.uid] = fan;
-          return acc;
-        }, {});
-    })
-    .flatMap(fans => {
-      let choices = _.map(fans, formatFanName);
+interface Fans {
+  [key: string]: Fan;
+}
 
-      return enquirer.ask([
-        {
-          type: "list",
-          name: "mainMenu",
-          message: "Here are your fans",
-          choices: [...choices, enquirer.separator(), "Refresh", "Quit"],
-          transform: answer => {
-            if (answer == "Refresh" || answer == "Quit") {
-              return { type: "action", value: answer };
-            }
-            let fan = _.find(fans, x => answer === formatFanName(x));
-            return { type: "fan", value: fan };
-          }
+const getFanDictionary = (ip: string): Observable<Fans> =>
+  fanControl.listFansWithInfo(ip).reduce((acc: Fans, fan) => {
+    acc[fan.id.uid] = fan;
+    return acc;
+  }, {});
+
+const mainMenu = (ip: string): Observable<Fan | Action> =>
+  getFanDictionary(ip).flatMap(fans => {
+    let fanChoices = _.map(fans, formatFanName);
+    let choices = [...fanChoices, enquirer.separator(), "Refresh", "Quit"];
+
+    return ask<Fan | Action>({
+      type: "list",
+      message: "Here are your fans",
+      choices,
+      transform: answer => {
+        if (answer == Action.Refresh || answer == Action.Quit) {
+          return answer;
         }
-      ]);
-    });
-};
+        let fan = _.find(fans, x => answer === formatFanName(x));
+        return fan || Action.Refresh;
+      }
+    }).map(x => x.answer);
+  });
 
 interface ConfigAnswers {
   configOption: string;
   fanName: string;
   fanSpeeds: string;
 }
-const configureMenu = (ip, answers) => {
-  let uid = answers.mainMenu.value.info.uid;
+enum ConfigureAnswer {
+  UpdateName = "Update Name",
+  UpdateSpeeds = "Update Speeds"
+}
 
-  return Observable.from(
-    enquirer.ask([
-      {
-        type: "list",
-        name: "configOption",
-        message: `Configure ${answers.mainMenu.value.info.name} (${
-          sequences[answers.mainMenu.value.status.sequence]
-        })`,
-        choices: ["Update Name", "Update Speeds"]
-      }
-    ])
-  )
-    .flatMap<ConfigAnswers>(answers => {
-      switch (answers.configOption) {
-        case "Update Name":
-          return Observable.from(
-            enquirer.ask({
-              type: "input",
-              name: "fanName",
-              message: "What is the new name?"
-            })
-          )
-            .flatMap(name => fanControl.updateFanName(ip, uid, answers.fanName))
-            .map(x => ({}));
-        case "Update Speeds":
-          return Observable.from(
-            enquirer.ask({
-              type: "list",
-              name: "fanSpeeds",
-              message: "How many speeds does this fan have?",
-              choices: ["1", "2", "3"]
-            })
-          )
-            .flatMap(name =>
-              fanControl.updateFanSpeeds(ip, uid, answers.fanSpeeds)
-            )
-            .map(x => ({}));
+enum Speeds {
+  High = "3",
+  Medium = "2",
+  Low = "1"
+}
+const setCurrentSpeed = (fan: Fan) =>
+  ask<Speeds>({
+    type: "list",
+    message: `What speed for ${fan.info.name}`,
+    choices: ["High", "Medium", "Low"]
+  }).flatMap(x => fanControl.setCurrentSpeed(fan.id, Speeds[x.answer]));
+
+function isFan(x: Action | Fan): x is Fan {
+  return (<Fan>x).id !== undefined;
+}
+
+enum FanAction {
+  TurnOn = "Turn On",
+  TurnOff = "Turn Off",
+  SetCurrentSpeed = "Set Current Speed",
+  UpdateName = "Update Name",
+  UpdateSpeeds = "Update Speeds",
+  BackToMenu = "Back To Menu"
+}
+
+interface FanMenuAnswer {
+  fan: Fan;
+  action: FanAction;
+}
+
+const fanMenu = (fan: Fan): Observable<FanMenuAnswer> =>
+  ask<FanAction>({
+    type: "list",
+    message: "What do you want to do?",
+    choices: [
+      FanAction.TurnOn,
+      FanAction.TurnOff,
+      FanAction.SetCurrentSpeed,
+      FanAction.UpdateName,
+      FanAction.UpdateSpeeds,
+      FanAction.BackToMenu
+    ]
+  }).map(x => ({ fan, action: x.answer }));
+
+const updateName = (fan: Fan) =>
+  ask<string>({
+    type: "input",
+    message: "What is the new name?"
+  }).flatMap(x => fanControl.updateFanName(fan.id, x.answer));
+
+const updateSpeeds = (fan: Fan) =>
+  ask<string>({
+    type: "list",
+    message: "How many speeds does this fan have?",
+      choices: ["3", "2", "1"]
+  }).flatMap(x => fanControl.updateFanSpeeds(fan.id, x.answer));
+
+const program = (ip: string): Observable<any> => {
+  return mainMenu(ip)
+    .takeWhile(x => isFan(x) || x === Action.Refresh)
+    .flatMap(x => (isFan(x) ? fanMenu(x) : program(ip)))
+    .flatMap<FanMenuAnswer, any>(({ fan, action }) => {
+      let id = fan.id;
+
+      switch (action) {
+        case FanAction.TurnOn:
+          return fanControl.turnFanOn(fan.id);
+        case FanAction.TurnOff:
+          return fanControl.turnFanOff(fan.id);
+        case FanAction.UpdateName:
+          return updateName(fan);
+        case FanAction.UpdateSpeeds:
+          return updateSpeeds(fan);
+        case FanAction.SetCurrentSpeed:
+          return setCurrentSpeed(fan);
         default:
           return Observable.of({});
       }
     })
     .flatMap(x => program(ip));
 };
-interface SpeedAnswers {
-  setSpeed: string;
-}
-const speedMenu = (ip, answers) => {
-  let uid = answers.mainMenu.value.info.uid;
-
-  return Observable.from(
-    enquirer.ask([
-      {
-        type: "list",
-        name: "setSpeed",
-        message: `What speed for ${answers.mainMenu.value.info.name}`,
-        choices: ["High", "Medium", "Low"]
-      }
-    ])
-  )
-    .flatMap<SpeedAnswers>(answers => {
-      switch (answers.setSpeed) {
-        case "High":
-          return fanControl.setCurrentSpeed(ip, uid, "3");
-        case "Medium":
-          return fanControl.setCurrentSpeed(ip, uid, "2");
-        case "Low":
-          return fanControl.setCurrentSpeed(ip, uid, "1");
-      }
-    })
-    .flatMap(x => program(ip));
-};
-
-interface MainMenuAnswerType {
-  type: string;
-  value: string;
-}
-interface MainMenuAnswers {
-  mainMenu: MainMenuAnswerType;
-}
-
-const program = ip => {
-  return mainMenu(ip)
-    .takeWhile<MainMenuAnswers>(answer => answer.mainMenu.value != "Quit")
-    .flatMap<MainMenuAnswers>(({ mainMenu: { type, value } }) => {
-      if (type == "action" && value == "Refresh") {
-        return program(ip);
-      } else {
-        return enquirer.ask([
-          {
-            type: "list",
-            name: "action",
-            message: "What do you want to do?",
-            choices: [
-              "Turn On",
-              "Turn Off",
-              "Set Current Speed",
-              "Configure",
-              "Back To Menu"
-            ]
-          }
-        ]);
-      }
-    })
-    .flatMap(answers => {
-      let uid = answers.mainMenu.value.info.uid;
-      switch (answers.action) {
-        case "Turn On":
-          return fanControl.turnFanOn(ip, uid).flatMap(x => program(ip));
-        case "Turn Off":
-          return fanControl.turnFanOff(ip, uid).flatMap(x => program(ip));
-        case "Configure":
-          return configureMenu(ip, answers);
-        case "Set Current Speed":
-          return speedMenu(ip, answers);
-        case "Back To Menu":
-          return program(ip);
-        default:
-          return program(ip);
-      }
-    });
-};
 
 let ip = process.env.CONTROLLER_IP;
-program(ip)
-  .catch(err => {
-    console.log("ERROR", err);
-    program(ip);
-  })
-  .subscribe(
+if (!ip) {
+  console.log("No IP Address set in .env file");
+} else {
+  program(ip).subscribe(
     fans => console.log(fans),
     err => console.log(err),
     () => console.log("completed")
   );
+}
