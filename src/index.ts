@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import * as _ from "lodash";
 import { Observable } from "rxjs";
 import * as dotenv from "dotenv";
@@ -174,7 +175,7 @@ const program = (ip: string): Observable<any> => {
 
 let ip = process.env.CONTROLLER_IP;
 if (!ip) {
-  console.log("No IP Address set in .env file");
+  console.log("The environment variable CONTROLLER_IP was not set");
 } else {
   program(ip).subscribe(
     fans => console.log(fans),

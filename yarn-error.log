@@ -1,0 +1,70 @@
+Arguments: 
+  /Users/dstone3/.nodenv/versions/8.9.4/bin/node /usr/local/Cellar/yarn/1.5.1_1/libexec/bin/yarn.js build
+
+PATH: 
+  /Users/dstone3/.nodenv/versions/8.9.4/bin:/usr/local/Cellar/nodenv/1.1.2/libexec:/Users/dstone3/.nodenv/plugins/nodenv-package-rehash/bin:/Users/dstone3/.nodenv/shims:/Users/dstone3/.jenv/shims:/Users/dstone3/.jenv/bin:/Users/dstone3/.local/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Applications/Wireshark.app/Contents/MacOS:/Developer/usr/bin:/usr/local/sbin:/usr/local/share/npm/bin:/Users/dstone3/.nvim/plugged/fzf/bin
+
+Yarn version: 
+  1.5.1
+
+Node version: 
+  8.9.4
+
+Platform: 
+  darwin x64
+
+npm manifest: 
+  {
+    "name": "quietcool-cli",
+    "version": "1.0.0",
+    "description": "",
+    "main": "index.js",
+    "scripts": {
+      "build": "tsc",
+      "start": "ts-node src/index.ts",
+      "format": "prettier --write src/*"
+    },
+    "author": "David Stone",
+    "bin": "./build/index.js",
+    "license": "Apache-2.0",
+    "dependencies": {
+      "dotenv": "^5.0.0",
+      "enquirer": "^1.0.2",
+      "inquirer": "^5.1.0",
+      "limiter": "^1.1.2",
+      "lodash": "^4.17.4",
+      "nodemon": "^1.11.1",
+      "prompt-list": "^3.1.2",
+      "quietcool": "^1.3.0",
+      "rxjs": "^5.4.3"
+    },
+    "devDependencies": {
+      "@types/dotenv": "^4.0.2",
+      "@types/lodash": "^4.14.104",
+      "prettier": "^1.10.2",
+      "ts-node": "^4.1.0",
+      "typescript": "^2.7.2"
+    }
+  }
+
+yarn manifest: 
+  No manifest
+
+Lockfile: 
+  No lockfile
+
+Trace: 
+  Error: Command failed.
+  Exit code: 127
+  Command: sh
+  Arguments: -c tsc
+  Directory: /Users/dstone3/code/quietcool/quietcool-cli
+  Output:
+  
+      at ProcessTermError.MessageError (/usr/local/Cellar/yarn/1.5.1_1/libexec/lib/cli.js:186:110)
+      at new ProcessTermError (/usr/local/Cellar/yarn/1.5.1_1/libexec/lib/cli.js:226:113)
+      at ChildProcess.<anonymous> (/usr/local/Cellar/yarn/1.5.1_1/libexec/lib/cli.js:30281:17)
+      at emitTwo (events.js:126:13)
+      at ChildProcess.emit (events.js:214:7)
+      at maybeClose (internal/child_process.js:925:16)
+      at Process.ChildProcess._handle.onexit (internal/child_process.js:209:5)
